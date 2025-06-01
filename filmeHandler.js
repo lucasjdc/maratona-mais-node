@@ -1,19 +1,29 @@
 require('dotenv').config();
-const http = require('http');
 const https = require('https');
 
-const PORT = 3000;
+function filmeHandler(req, res) {
 
-const server = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        return res.end();
+    }
+
+    console.log(`Requisição recebida: ${req.method} ${req.url}`);
+
+
     if (req.method === 'POST' && req.url === '/filme') {
         let body = '';
 
-        // Correção: deve ser req.on, não res.on
         req.on('data', chunk => {
             body += chunk.toString();
         });
 
         req.on('end', () => {
+            console.log(`Corpo recebido: ${body}`);
             try {
                 const { titulo } = JSON.parse(body);
                 if (!titulo) {
@@ -24,6 +34,8 @@ const server = http.createServer((req, res) => {
                 const apikey = process.env.OMDB_API_KEY;
                 const url = `https://www.omdbapi.com/?t=${encodeURIComponent(titulo)}&apikey=${apikey}`;
 
+                console.log(`Buscando filme: ${titulo}`);                
+
                 https.get(url, (omdbRes) => {
                     let data = '';
 
@@ -32,6 +44,7 @@ const server = http.createServer((req, res) => {
                     });
 
                     omdbRes.on('end', () => {
+                        console.log(`Resposta da OMDb: ${data}`);
                         const filme = JSON.parse(data);
 
                         if (filme.Response === 'True') {
@@ -51,10 +64,12 @@ const server = http.createServer((req, res) => {
                         }
                     });
                 }).on('error', err => {
+                    console.log('Erro na requisição à OMDb', err.message);
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ erro: 'Erro na requisição à OMDb', detalhe: err.message }));
                 });
             } catch (e) {
+                console.log('Erro ao processar JSON:', e.message);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ erro: 'JSON inválido' }));
             }
@@ -63,8 +78,6 @@ const server = http.createServer((req, res) => {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ erro: 'Rota não encontrada' }));
     }
-});
+}
 
-server.listen(PORT, () => {
-    console.log(`Servidor rodando em http://localhost:${PORT}`);
-});
+module.exports = filmeHandler;
