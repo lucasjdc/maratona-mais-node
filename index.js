@@ -1,42 +1,70 @@
 require('dotenv').config();
+const http = require('http');
 const https = require('https');
 
-// Pega o nome do filme digitado no terminal
-const args = process.argv.slice(2);
-const nomeFilme = args.join('+'); // Junta palavras com "+" para a URL
+const PORT = 3000;
 
-if (!nomeFilme) {
-    console.log('Digite o nome de um filme. Ex: node index.js Top Gun');
-    process.exit(1);
-}
+const server = http.createServer((req, res) => {
+    if (req.method === 'POST' && req.url === '/filme') {
+        let body = '';
 
-const apikey = process.env.OMDB_API_KEY;
+        // Correção: deve ser req.on, não res.on
+        req.on('data', chunk => {
+            body += chunk.toString();
+        });
 
-const url  = `https://www.omdbapi.com/?t=${nomeFilme}&apikey=${apikey}`;
+        req.on('end', () => {
+            try {
+                const { titulo } = JSON.parse(body);
+                if (!titulo) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ erro: 'Campo "titulo" é obrigatório' }));
+                }
 
-https.get(url, (res) => {
-    let data = '';
+                const apikey = process.env.OMDB_API_KEY;
+                const url = `https://www.omdbapi.com/?t=${encodeURIComponent(titulo)}&apikey=${apikey}`;
 
-    // Receba os dados em partes
-    res.on('data', (chunk) => {
-        data += chunk;
-    });
+                https.get(url, (omdbRes) => {
+                    let data = '';
 
-    // Quando terminar de receber
-    res.on('end', () => {
-        const filme = JSON.parse(data);
-        if (filme.Response === 'True') {
-            console.log(`Título: ${filme.Title}`);
-            console.log(`Ano: ${filme.Year}`);
-            console.log(`Gênero: ${filme.Genre}`);
-            console.log(`Atores: ${filme.Actors}`);
-            filme.Ratings.forEach(rating => {
-                console.log(` - ${rating.Source}: ${rating.Value}`);
-            });
-        } else {
-            console.log(`Filme não encontrado: ${filme.Error}`)
-        }
-    });
-}).on('error', (err) => {
-    console.error('Erro:', err.message);
+                    omdbRes.on('data', chunk => {
+                        data += chunk;
+                    });
+
+                    omdbRes.on('end', () => {
+                        const filme = JSON.parse(data);
+
+                        if (filme.Response === 'True') {
+                            const resposta = {
+                                titulo: filme.Title,
+                                ano: filme.Year,
+                                genero: filme.Genre,
+                                atores: filme.Actors,
+                                avaliacoes: filme.Ratings
+                            };
+
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(resposta, null, 2));
+                        } else {
+                            res.writeHead(404, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ erro: filme.Error }));
+                        }
+                    });
+                }).on('error', err => {
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ erro: 'Erro na requisição à OMDb', detalhe: err.message }));
+                });
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ erro: 'JSON inválido' }));
+            }
+        });
+    } else {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ erro: 'Rota não encontrada' }));
+    }
+});
+
+server.listen(PORT, () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
