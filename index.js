@@ -28,7 +28,11 @@ https.get(url, (res) => {
         if (filme.Response === 'True') {
             console.log(`Título: ${filme.Title}`);
             console.log(`Ano: ${filme.Year}`);
+            console.log(`Gênero: ${filme.Genre}`);
             console.log(`Atores: ${filme.Actors}`);
+            filme.Ratings.forEach(rating => {
+                console.log(` - ${rating.Source}: ${rating.Value}`);
+            });
         } else {
             console.log(`Filme não encontrado: ${filme.Error}`)
         }
