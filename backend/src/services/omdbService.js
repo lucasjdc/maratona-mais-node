@@ -12,12 +12,14 @@ function buscarFilme(titulo) {
             omdbRes.on('end', () => {
                 try {
                     const filme = JSON.parse(data);
+                    //console.log(filme);
                     if (filme.Response === 'True') {
                         resolve({
                             titulo: filme.Title,
                             ano: filme.Year,
                             genero: filme.Genre,
                             atores: filme.Actors,
+                            poster: filme.Poster,
                             avaliacoes: filme.Ratings
                         });
                     } else {

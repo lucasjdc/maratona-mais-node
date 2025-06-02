@@ -4,7 +4,7 @@
   "description": "",
   "main": "backend/src/server.js",
   "scripts": {
-    "start": "concurrently \"node backend/src/server.js\" \"live-server frontend\"",
+    "start": "concurrently \"nodemon backend/src/server.js\" \"live-server frontend\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,6 +15,7 @@
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.10"
   }
 }
